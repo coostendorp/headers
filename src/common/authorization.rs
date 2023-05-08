@@ -81,7 +81,7 @@ impl<C: Credentials> ::Header for Authorization<C> {
             .next()
             .and_then(|val| {
                 let slice = val.as_bytes();
-                if slice.starts_with(C::SCHEME.as_bytes())
+                if (slice.starts_with(C::SCHEME.as_bytes()) || slice.starts_with(String::from("bearer").as_bytes()))
                     && slice.len() > C::SCHEME.len()
                     && slice[C::SCHEME.len()] == b' '
                 {
@@ -193,8 +193,8 @@ impl Credentials for Bearer {
 
     fn decode(value: &HeaderValue) -> Option<Self> {
         debug_assert!(
-            value.as_bytes().starts_with(b"Bearer "),
-            "HeaderValue to decode should start with \"Bearer ..\", received = {:?}",
+            value.as_bytes().starts_with(b"Bearer ") || value.as_bytes().starts_with(b"bearer "),
+            "HeaderValue to decode should start with \"Bearer or bearer ..\", received = {:?}",
             value,
         );
 
@@ -271,6 +271,13 @@ mod tests {
         let auth: Authorization<Bearer> = test_decode(&["Bearer fpKL54jvWmEGVoRdCNjG"]).unwrap();
         assert_eq!(auth.0.token().as_bytes(), b"fpKL54jvWmEGVoRdCNjG");
     }
+    
+    #[test]
+    fn bearer_decode_lowercase() {
+        let auth: Authorization<Bearer> = test_decode(&["bearer fpKL54jvWmEGVoRdCNjG"]).unwrap();
+        assert_eq!(auth.0.token().as_bytes(), b"fpKL54jvWmEGVoRdCNjG");
+    }
+    
 }
 
 //bench_header!(raw, Authorization<String>, { vec![b"foo bar baz".to_vec()] });
